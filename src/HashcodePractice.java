@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 
 public class HashcodePractice {
 
@@ -32,25 +33,37 @@ public class HashcodePractice {
 
     // creates a boolean array representing the solution of the greedy
     static boolean[] solFromGreedy(int left, int right, Integer[] slices) {
-        boolean[] used = new boolean[slices.length];
+        boolean[] state = new boolean[slices.length];
 
         for (int i = 0; i <= left; i++) {
-            used[i] = true;
+            state[i] = true;
         }
         for (int i = right; i < slices.length; i++) {
-            used[i] = true;
+            state[i] = true;
         }
-        return used;
+        return state;
+    }
+
+    // sum of the current state
+    static int sum(boolean[] state, Integer[] slices) {
+        int sum = 0;
+
+        for (int i = 0; i < state.length; i++) {
+            if (state[i]) {
+                sum += slices[i];
+            }
+        }
+        return sum;
     }
 
     // validates a solution and writes it to disk in a file and returns the sum
-    static int validateWrite(boolean[] used, Integer[] slices, String filename) {
+    static int validateWrite(boolean[] state, Integer[] slices, String filename) {
         StringBuilder sb = new StringBuilder();
 
         int sum = 0;
         int total = 0;
-        for (int i = 0; i < used.length; i++) {
-            if (used[i]) {
+        for (int i = 0; i < state.length; i++) {
+            if (state[i]) {
                 sb.append(i);
                 sb.append(' ');
                 ++total;
@@ -72,7 +85,7 @@ public class HashcodePractice {
     }
 
     // greedy sum maximizer at filename
-    static void greedySolver(String filename) {
+    static int greedySolver(String filename) {
         ArrayList<String> lines = readLines(filename);
         Integer[][] intLines = new Integer[lines.size()][];
         for (int i = 0; i < lines.size(); i++) {
@@ -132,17 +145,14 @@ public class HashcodePractice {
             newRemaining = maxSlices - leftSum - rightSum;
         }
 
-        boolean[] used = solFromGreedy(prevLeftIndex, prevRightIndex, slices);
-        int sum = validateWrite(used, slices, filename.replace(".in", ".out"));
-        System.out.println(maxSlices - sum);
-        twoSwap(used, slices, sum, maxSlices);
-        sum = validateWrite(used, slices, filename.replace(".in", ".out"));
-        System.out.println(maxSlices - sum);
-        System.out.println();
+        boolean[] state = solFromGreedy(prevLeftIndex, prevRightIndex, slices);
+        twoSwap(state, slices, sum(state, slices), maxSlices, true);
+        int sum = validateWrite(state, slices, filename.replace(".in", ".out"));
+        return maxSlices - sum;
     }
 
     // swap two elements at a time until the gain becomes 0
-    static int twoSwap(boolean[] used, Integer[] slices, int sum, int max) {
+    static int twoSwap(boolean[] state, Integer[] slices, int sum, int max, boolean recurse) {
         int swapOut = 0;
         int swapIn = 0;
 
@@ -150,7 +160,7 @@ public class HashcodePractice {
         int bestDiff = 0;
         for (int out = 0; out < slices.length; out++) {
             for (int in = out; in < slices.length; in++) {
-                if (used[out] && !used[in]) {
+                if (state[out] && !state[in]) {
                     int diff = slices[in] - slices[out];
                     if (diff <= remaining) {
                         if (diff > bestDiff) {
@@ -164,19 +174,84 @@ public class HashcodePractice {
                 }
             }
         }
-        used[swapIn] = !used[swapIn];
-        used[swapOut] = !used[swapOut];
+        state[swapIn] = !state[swapIn];
+        state[swapOut] = !state[swapOut];
 
         int newSum = sum - slices[swapOut] + slices[swapIn];
-        if (newSum != sum) {
-            return twoSwap(used, slices, newSum, max);
+        if (newSum != sum && recurse) {
+            return twoSwap(state, slices, newSum, max, recurse);
         }
         return sum;
     }
 
     // simulated annealing maximizer at filename
-    static void npSolver(String filename) {
+    static int npSolver(String filename) {
+        ArrayList<String> lines = readLines(filename);
+        Integer[][] intLines = new Integer[lines.size()][];
+        for (int i = 0; i < lines.size(); i++) {
+            intLines[i] = parseInts(lines.get(i)).toArray(new Integer[0]);
+        }
 
+        // actual problem (greedy approach)
+        int maxSlices = intLines[0][0];
+        int pizzaTypes = intLines[0][1];
+        Integer[] slices = intLines[1];
+
+        // rightSum is the sum from rightIndex to the end
+        int rightIndex = pizzaTypes - 1;
+        int rightSum = 0;
+        for (; rightIndex >= 0; rightIndex--) {
+            rightSum += slices[rightIndex];
+            if (rightSum > maxSlices) {
+                break;
+            }
+        }
+        rightSum -= slices[rightIndex++];
+
+        // leftSum is the sum from the start to leftIndex
+        int leftUpper = maxSlices - rightSum;
+        int leftIndex = 0;
+        int leftSum = 0;
+        for (; leftIndex < rightIndex; leftIndex++) {
+            leftSum += slices[leftIndex];
+            if (leftSum > leftUpper) {
+                break;
+            }
+        }
+        leftSum -= slices[leftIndex--];
+
+        int remaining = maxSlices - leftSum - rightSum;
+        int newRemaining = remaining;
+
+        // decrement rightIndex and advance leftIndex forward
+        int prevLeftIndex = leftIndex;
+        int prevRightIndex = rightIndex;
+        while (newRemaining <= remaining) {
+            prevLeftIndex = leftIndex;
+            prevRightIndex = rightIndex;
+
+            rightSum -= slices[rightIndex++];
+            leftUpper = maxSlices - rightSum;
+
+            for (; leftIndex < rightIndex; leftIndex++) {
+                leftSum += slices[leftIndex];
+                if (leftSum > leftUpper) {
+                    break;
+                }
+            }
+            leftSum -= slices[leftIndex--];
+
+            remaining = newRemaining;
+            newRemaining = maxSlices - leftSum - rightSum;
+        }
+
+//        boolean[] state = solFromGreedy(prevLeftIndex, prevRightIndex, slices);
+//        twoSwap(state, slices, sum(state, slices), maxSlices);
+        boolean[] state = new boolean[slices.length];
+        SimulatedAnnealing sa = new SimulatedAnnealing(state, slices, sum(state, slices), maxSlices);
+        sa.simulate();
+        int sum = validateWrite(sa.minState, slices, filename.replace(".in", ".out"));
+        return maxSlices - sum;
     }
 
     public static void main(String[] args) {
@@ -185,8 +260,38 @@ public class HashcodePractice {
         if (!dir.contains("src")) {
             dir += "src/";
         }
-        for (String file : files) {
-            greedySolver(dir + file);
+
+        Semaphore sem = new Semaphore(1);
+        for (int i = 0; i < files.length; i++) {
+            String filename = dir + files[i];
+            int diff = greedySolver(filename);
+            int diffSA = npSolver(filename);
+            System.out.println(filename + " -> greedy: " + diff + ", sa: " + diffSA + "\n");
+        }
+    }
+
+    static class Solver extends Thread {
+        String filename;
+        Semaphore sem;
+
+        Solver(String dir, String target, Semaphore sem) {
+            super(target);
+            filename = dir + target;
+            this.sem = sem;
+        }
+
+        @Override
+        public void run() {
+            try {
+                sem.acquire();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            int diff = greedySolver(filename);
+            int diffSA = npSolver(filename);
+            System.out.println(this.getName() + " results:\n"
+                    + "Greedy: " + diff + ", sa: " + diffSA + "\n");
+            sem.release();
         }
     }
 }
