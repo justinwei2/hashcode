@@ -181,7 +181,7 @@ public class HashcodePractice {
         if (newSum != sum && recurse) {
             return twoSwap(state, slices, newSum, max, recurse);
         }
-        return sum;
+        return newSum;
     }
 
     // simulated annealing maximizer at filename

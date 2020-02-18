@@ -35,7 +35,7 @@ public class SimulatedAnnealing {
                 }
                 state[index] = !state[index];
 
-//                sum = HashcodePractice.twoSwap(state, slices, sum, max, false);
+                sum = HashcodePractice.twoSwap(state, slices, sum, max, false);
                 int newDiff = max - sum;
                 if (newDiff < minDiff && newDiff >= 0) {
                     minDiff = newDiff;
