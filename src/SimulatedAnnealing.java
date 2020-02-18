@@ -1,59 +1,65 @@
-import java.util.Arrays;
-
 public class SimulatedAnnealing {
-    boolean[] state;
-    Integer[] slices;
+    // state representation
+    final boolean[] state;
+    final Integer[] slices;
+    final int maxPizzas;
+    final int maxSlices;
+
+    // simulation cached values
     int sum;
-    int max;
     int minDiff;
-    boolean[] minState;
+    final boolean[] minState;
 
+    // simulation parameters
     double T = 1;
-    static final double Tmin = 1e-6;
-    static final double alpha = .99;
-    static final double iterations = 1e6;
+    static final double T_MIN = 1e-5;
+    static final double alpha = .95;
+    static final double iterations = 1e5;
 
-    SimulatedAnnealing(boolean[] state, Integer[] slices, int sum, int max) {
-        this.state = state;
+    SimulatedAnnealing(Integer[] slices, int maxPizzas, int maxSlices) {
+        state = new boolean[slices.length];
         this.slices = slices;
-        this.sum = sum;
-        this.max = max;
-        minDiff = Integer.MAX_VALUE;
-        minState = Arrays.copyOf(state, state.length);
+        this.maxPizzas = maxPizzas;
+        this.maxSlices = maxSlices;
+
+        sum = 0;
+        minDiff = maxSlices;
+        minState = new boolean[slices.length];
     }
 
+    // continues annealing until minimum temp is reached
     void simulate() {
-        // Continues annealing until reaching minimum temp
-        while (T > Tmin) {
+        while (T > T_MIN) {
             for (int i = 0; i < iterations; i++) {
-                int index = permute();
-                // determine if wanna switch
-                if (state[index]) {
-                    sum -= slices[index];
-                } else {
-                    sum += slices[index];
-                }
-                state[index] = !state[index];
+                int flipIndex = (int) (state.length * Math.random());
 
-                sum = HashcodePractice.twoSwap(state, slices, sum, max, false);
-                int newDiff = max - sum;
-                if (newDiff < minDiff && newDiff >= 0) {
-                    minDiff = newDiff;
-                    for (int j = 0; j < minState.length; j++) {
-                        minState[j] = state[j];
-                    }
-                    if (minDiff == 0) {
-                        return;
-                    }
+                // calculate neighbor state attributes
+                int diff = maxSlices - sum;
+                if (state[flipIndex]) {
+                    diff += slices[flipIndex];
+                } else {
+                    diff -= slices[flipIndex];
+                }
+
+                // decide whether to move to neighbor state
+                double prob = ((double) diff) / minDiff;
+                if (prob < T) {
+                    state[flipIndex] = !state[flipIndex];
+                    sum = maxSlices - diff;
+
+                    if (tryCacheMinState(diff)) return;
                 }
             }
             T *= alpha;
         }
     }
 
-    // move the state space to a neighbor
-    int permute() {
-        int n = state.length;
-        return (int) (Math.random() * n);
+    // caches a new minimum state (returns if global optima is reached)
+    boolean tryCacheMinState(int diff) {
+        if (diff < minDiff && diff >= 0) {
+            minDiff = diff;
+            System.arraycopy(state, 0, minState, 0, state.length);
+        }
+        return minDiff == 0;
     }
 }
