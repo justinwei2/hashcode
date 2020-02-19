@@ -1,5 +1,6 @@
 import os
 import pulp
+import re
 import time
 
 
@@ -37,7 +38,7 @@ def pizzaProblem(filename):
     # Printing the final solution
     # for var in vars:
     #     print(pulp.value(var))
-    
+
     print(pulp.value(prob.objective))
     print("Difference: {}".format(maxSlices - pulp.value(prob.objective)))
 
@@ -45,7 +46,7 @@ def pizzaProblem(filename):
 if __name__ == '__main__':
     files = ["a_example.in", "b_small.in", "c_medium.in", "d_quite_big.in", "e_also_big.in"]
 
-    dir = os.path.dirname(os.path.realpath(__file__)) + "/{}"
+    dir = re.sub("hashcode.*", "hashcode/{}", os.path.dirname(os.path.realpath(__file__)))
     filenames = [dir.format(file) for file in files]
 
     for filename in filenames:

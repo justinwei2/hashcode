@@ -188,10 +188,7 @@ public class Hashcode {
 
     public static void main(String[] args) {
         String[] files = {"a_example.in", "b_small.in", "c_medium.in", "d_quite_big.in", "e_also_big.in"};
-        String dir = System.getProperty("user.dir") + "/";
-        if (!dir.contains("src")) {
-            dir += "src/";
-        }
+        String dir = System.getProperty("user.dir").replaceAll("hashcode.*", "hashcode/");
 
         for (String file : files) {
             String filename = dir + file;
