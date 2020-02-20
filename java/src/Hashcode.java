@@ -75,7 +75,7 @@ public class Hashcode {
         HashSet<Library> librariesWithBook = bookToLibraries.get(bookId);
 
         // sanity check
-        assert librariesWithBook != null && bookScores[bookId] > 0;
+        assert librariesWithBook != null;
         bookScores[bookId] = 0;
         for (Library l : librariesWithBook) {
             l.updateLibraryHeuristics();
