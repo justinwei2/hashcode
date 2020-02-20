@@ -22,7 +22,7 @@ def pizzaProblem(filename):
     for i in range(len(slices)):
         vars.append(pulp.LpVariable('x{}'.format(i), cat=pulp.constants.LpBinary))
 
-    # Objective Function
+    # Objective Function ac
     prob += sum([slices[int(var.name[1:])] * var for var in vars])
 
     # Constraints:
