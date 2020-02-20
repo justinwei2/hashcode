@@ -1,9 +1,9 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.io.FileWriter;
+import java.lang.reflect.Array;
+import java.util.*;
 
 public class Hashcode {
     final int numBooks;
@@ -15,7 +15,11 @@ public class Hashcode {
 
     final HashMap<Integer, HashSet<Library>> bookToLibraries;
 
+    long score;
+    String filename;
+
     Hashcode(String filename) {
+        this.filename = filename;
         int[][] lines = parseFile(filename);
 
         numBooks = lines[0][0];
@@ -27,6 +31,7 @@ public class Hashcode {
 
         bookToLibraries = new HashMap<>();
 
+        score = 0;
         for (int i = 2; i < lines.length; i++) {
             // library case
             int libraryIndex = (i - 2) / 2;
@@ -37,8 +42,6 @@ public class Hashcode {
                 libraries[libraryIndex].setupBooks(lines[i]);
             }
         }
-
-
     }
 
     // parses the input file as a 2d int array
@@ -75,7 +78,9 @@ public class Hashcode {
         HashSet<Library> librariesWithBook = bookToLibraries.get(bookId);
 
         // sanity check
-        assert librariesWithBook != null;
+        if (librariesWithBook == null) {
+            System.out.println(bookId + " already removed");
+        }
         bookScores[bookId] = 0;
         for (Library l : librariesWithBook) {
             l.updateLibraryHeuristics();
@@ -83,19 +88,120 @@ public class Hashcode {
         bookToLibraries.remove(bookId);
     }
 
-    @Override
-    public String toString() {
-        return "Hashcode{" +
-                "numBooks=" + numBooks +
-                ", numLibraries=" + numLibraries +
-                ", days=" + days +
-                ", bookScores=" + Arrays.toString(bookScores) +
-                ", libraries=" + Arrays.toString(libraries) +
-                '}';
+    // solver
+   /* void greedySolver() {
+        HashSet<Integer> runningLibraries = new HashSet<>();
+        HashSet<Integer> remainingLibraries = new HashSet<>();
+        int[] startDayForLibrary = new int[libraries.length];
+        for (int i = 0; i < numLibraries; i++) {
+            remainingLibraries.add(i);
+            startDayForLibrary[i] = -1;
+        }
+
+        int lastSetup = 0;
+        boolean possibleChoices = true;
+
+        for (int day = 0; day < days; day++) {
+            // find new library to start
+            if (day >= lastSetup && possibleChoices) {
+//                int maxScore = 0;
+//                int chosen = -1;
+//                for (int i = 0; i < days - day; i++) {
+//                    for (int remainingId : remainingLibraries) {
+//                        int[] libraryScores = libraries[remainingId].scoreAfterNDays;
+//                        if (i < libraryScores.length) {
+//                            int score = libraryScores[i];
+//                            if (score > maxScore) {
+//                                maxScore = score;
+//                                chosen = remainingId;
+//                            }
+//
+//                        }
+//                    }
+//                }
+//
+//                // chosen should've been found, otherwise no more points can be gained
+//                if (chosen == -1 || remainingLibraries.size() == 0) {
+//                    break;
+//                }
+//
+//                lastSetup += libraries[chosen].setupTime;
+//                // add chosen to running list
+//                remainingLibraries.remove(chosen);
+//                runningLibraries.add(chosen);
+//                startDayForLibrary[chosen] = day;
+            }
+
+
+        }
+        // add all running library scores
+
+    }*/
+
+    void greedySolver() {
+        ArrayList<Integer> runningLibraries = new ArrayList<>();
+//        HashSet<Integer> remainingLibraries = new HashSet<>();
+        int[] startDayForLibrary = new int[libraries.length];
+        for (int i = 0; i < numLibraries; i++) {
+//            remainingLibraries.add(i);
+            startDayForLibrary[i] = 0;
+        }
+
+
+        Library[] pqLib = new Library[libraries.length];
+        System.arraycopy(libraries, 0, pqLib, 0, libraries.length);
+        Arrays.sort(pqLib);
+
+        int libIndex = 0;
+        int day = 0;
+        while (day < days && libIndex < libraries.length) {
+            // find new library to start
+            int chosen = pqLib[libIndex++].libraryId;
+
+            startDayForLibrary[chosen] = day;
+            day += libraries[chosen].setupTime;
+            // add chosen to running list
+            runningLibraries.add(chosen);
+        }
+        validate(runningLibraries, startDayForLibrary);
+        write(runningLibraries);
     }
 
-    void solve() {
+    void write(ArrayList<Integer> rLs) {
+        StringBuilder sb = new StringBuilder();
 
+        int libs = 0;
+        for (int l : rLs) {
+            if (libraries[l].scanned != 0) {
+                libs++;
+                sb.append(l + " " + libraries[l].scanned + "\n");
+                for (int b : libraries[l].scannedIds) {
+                    sb.append(b + " ");
+                }
+                sb.append("\n");
+            }
+        }
+        sb.insert(0, libs + "\n");
+
+        // write the solution
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".result"));
+            writer.write(sb.toString());
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    long validate(ArrayList<Integer> running, int[] startDaysForLibrary) {
+        long sum = 0;
+        for (int libId : running) {
+            int maxDays = days - startDaysForLibrary[libId];
+            sum += libraries[libId].count(maxDays);
+        }
+//        System.out.println(sum);
+        score = sum;
+        return sum;
     }
 
     public static void main(String[] args) {
@@ -103,13 +209,16 @@ public class Hashcode {
         String[] files = {"a_example", "b_read_on", "c_incunabula", "d_tough_choices", "e_so_many_books", "f_libraries_of_the_world"};
         String dir = System.getProperty("user.dir").replaceAll("hashcode.*", "hashcode/");
 
+        long s = 0;
         for (String file : files) {
             String filename = dir + file + ".txt";
             Hashcode hc = new Hashcode(filename);
-            hc.solve();
+            hc.greedySolver();
+            s += hc.score;
 //            System.out.println(hc.toString());
-            System.out.println(file);
+//            System.out.println(file);
         }
+        System.out.println(s);
     }
 
     /**
@@ -117,12 +226,12 @@ public class Hashcode {
      * library id:
      */
 
-    // copies of book can exist in multiple libs
-    // copies might exists in a library
+// copies of book can exist in multiple libs
+// copies might exists in a library
 
 
-    // libraries can be signed up, one at a time, in any order
-    class Library {
+// libraries can be signed up, one at a time, in any order
+    class Library implements Comparable<Library> {
         // given params
         final Book[] books;
         final int setupTime;
@@ -136,6 +245,9 @@ public class Hashcode {
         int maxRunningTime;
         final int[] scoreAfterNDays;
         final double[] percentOfLibraryMax;
+
+        int scanned = 0;
+        ArrayList<Integer> scannedIds = new ArrayList<>();
 
         Library(int numBooks, int setupTime, int scanRate, int libraryId) {
             this.numBooks = numBooks;
@@ -179,6 +291,32 @@ public class Hashcode {
             for (int i = setupTime; i < maxRunningTime; i++) {
                 percentOfLibraryMax[i] = scoreAfterNDays[i] / max;
             }
+        }
+
+        long count(int maxDays) {
+            int bound = (maxDays - setupTime) * scanRate;
+
+            long sum = 0;
+            for (int i = 0; i < books.length && scanned < bound; i++) {
+                int bid = books[i].bookId;
+                if (bookScores[bid] != 0) {
+                    sum += bookScores[bid];
+                    bookScores[bid] = 0;
+                    scanned++;
+                    scannedIds.add(bid);
+                }
+            }
+            return sum;
+        }
+
+        public int compareTo(Library l2) {
+            // find and average of setupTime interval
+            int n = 2;
+            int i1 = Math.min(scoreAfterNDays.length - 1, setupTime * n * scanRate);
+            int i2 = Math.min(l2.scoreAfterNDays.length - 1, l2.setupTime * n * l2.scanRate);
+            double score1 = 1. * scoreAfterNDays[i1] / setupTime;
+            double score2 = 1. * l2.scoreAfterNDays[i2] / l2.setupTime;
+            return -Double.compare(score1, score2);
         }
     }
 
