@@ -2,6 +2,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 
 public class Hashcode {
     final int numBooks;
@@ -10,6 +12,8 @@ public class Hashcode {
 
     final int[] bookScores;
     final Library[] libraries;
+
+    final HashMap<Integer, HashSet<Library>> bookToLibraries;
 
     Hashcode(String filename) {
         int[][] lines = parseFile(filename);
@@ -21,6 +25,8 @@ public class Hashcode {
         bookScores = lines[1];
         libraries = new Library[numLibraries];
 
+        bookToLibraries = new HashMap<>();
+
         for (int i = 2; i < lines.length; i++) {
             // library case
             int libraryIndex = (i - 2) / 2;
@@ -29,7 +35,6 @@ public class Hashcode {
                 libraries[libraryIndex] = new Library(attr[0], attr[1], attr[2], libraryIndex);
             } else {
                 libraries[libraryIndex].setupBooks(lines[i]);
-
             }
         }
 
@@ -62,6 +67,20 @@ public class Hashcode {
             e.printStackTrace();
             return null;
         }
+    }
+
+    // mark a book as read and update all heuristics
+    void removeBook(int bookId) {
+        // see associated libraries
+        HashSet<Library> librariesWithBook = bookToLibraries.get(bookId);
+
+        // sanity check
+        assert librariesWithBook != null && bookScores[bookId] > 0;
+        bookScores[bookId] = 0;
+        for (Library l : librariesWithBook) {
+            l.updateLibraryHeuristics();
+        }
+        bookToLibraries.remove(bookId);
     }
 
     @Override
@@ -101,6 +120,7 @@ public class Hashcode {
     // copies of book can exist in multiple libs
     // copies might exists in a library
 
+
     // libraries can be signed up, one at a time, in any order
     class Library {
         // given params
@@ -133,11 +153,14 @@ public class Hashcode {
         void setupBooks(int[] bookIds) {
             for (int i = 0; i < bookIds.length; i++) {
                 int bookId = bookIds[i];
-                books[i] = new Book(bookId, bookScores[bookId]);
+                books[i] = new Book(bookId);
+                HashSet<Library> librariesWithBook = bookToLibraries.getOrDefault(bookId, new HashSet<>());
+                librariesWithBook.add(this);
+                bookToLibraries.put(bookId, librariesWithBook);
             }
             Arrays.sort(books);
             for (int i = setupTime; i < maxRunningTime; i++) {
-                scoreAfterNDays[i] = scoreAfterNDays[i - 1] + books[i - setupTime].bookScore;
+                scoreAfterNDays[i] = scoreAfterNDays[i - 1] + books[i - setupTime].getScore();
             }
             double max = scoreAfterNDays[maxRunningTime - 1];
             for (int i = setupTime; i < maxRunningTime; i++) {
@@ -146,20 +169,33 @@ public class Hashcode {
 //            System.out.println(Arrays.toString(scoreAfterNDays));
 //            System.out.println(Arrays.toString(percentOfLibraryMax));
         }
+
+        void updateLibraryHeuristics() {
+            Arrays.sort(books);
+            for (int i = setupTime; i < maxRunningTime; i++) {
+                scoreAfterNDays[i] = scoreAfterNDays[i - 1] + books[i - setupTime].getScore();
+            }
+            double max = scoreAfterNDays[maxRunningTime - 1];
+            for (int i = setupTime; i < maxRunningTime; i++) {
+                percentOfLibraryMax[i] = scoreAfterNDays[i] / max;
+            }
+        }
     }
 
     // can be scanned in parallel
     class Book implements Comparable<Book> {
         final int bookId;
-        final int bookScore;
 
-        public Book(int bookId, int bookScore) {
+        public Book(int bookId) {
             this.bookId = bookId;
-            this.bookScore = bookScore;
+        }
+
+        public int getScore() {
+            return bookScores[bookId];
         }
 
         public int compareTo(Book b2) {
-            return b2.bookScore - bookScore;
+            return bookScores[b2.bookId] - bookScores[bookId];
         }
     }
 
