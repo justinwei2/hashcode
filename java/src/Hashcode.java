@@ -61,8 +61,6 @@ public class Hashcode {
             int[][] nums = new int[lines.size()][];
 
             for (int i = 0; i < lines.size(); i++) {
-//                System.out.println(lines[i]);
-//                System.out.println(Arrays.toString(lines[i].split(" ")));
                 nums[i] = Arrays.stream(lines.get(i).split(" ")).mapToInt(Integer::parseInt).toArray();
             }
             return nums;
@@ -88,62 +86,10 @@ public class Hashcode {
         bookToLibraries.remove(bookId);
     }
 
-    // solver
-   /* void greedySolver() {
-        HashSet<Integer> runningLibraries = new HashSet<>();
-        HashSet<Integer> remainingLibraries = new HashSet<>();
-        int[] startDayForLibrary = new int[libraries.length];
-        for (int i = 0; i < numLibraries; i++) {
-            remainingLibraries.add(i);
-            startDayForLibrary[i] = -1;
-        }
-
-        int lastSetup = 0;
-        boolean possibleChoices = true;
-
-        for (int day = 0; day < days; day++) {
-            // find new library to start
-            if (day >= lastSetup && possibleChoices) {
-//                int maxScore = 0;
-//                int chosen = -1;
-//                for (int i = 0; i < days - day; i++) {
-//                    for (int remainingId : remainingLibraries) {
-//                        int[] libraryScores = libraries[remainingId].scoreAfterNDays;
-//                        if (i < libraryScores.length) {
-//                            int score = libraryScores[i];
-//                            if (score > maxScore) {
-//                                maxScore = score;
-//                                chosen = remainingId;
-//                            }
-//
-//                        }
-//                    }
-//                }
-//
-//                // chosen should've been found, otherwise no more points can be gained
-//                if (chosen == -1 || remainingLibraries.size() == 0) {
-//                    break;
-//                }
-//
-//                lastSetup += libraries[chosen].setupTime;
-//                // add chosen to running list
-//                remainingLibraries.remove(chosen);
-//                runningLibraries.add(chosen);
-//                startDayForLibrary[chosen] = day;
-            }
-
-
-        }
-        // add all running library scores
-
-    }*/
-
     void greedySolver() {
         ArrayList<Integer> runningLibraries = new ArrayList<>();
-//        HashSet<Integer> remainingLibraries = new HashSet<>();
         int[] startDayForLibrary = new int[libraries.length];
         for (int i = 0; i < numLibraries; i++) {
-//            remainingLibraries.add(i);
             startDayForLibrary[i] = 0;
         }
 
@@ -185,7 +131,7 @@ public class Hashcode {
 
         // write the solution
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter(filename + ".result"));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(filename.replaceAll(".txt", ".result")));
             writer.write(sb.toString());
             writer.close();
         } catch (Exception e) {
@@ -199,13 +145,11 @@ public class Hashcode {
             int maxDays = days - startDaysForLibrary[libId];
             sum += libraries[libId].count(maxDays);
         }
-//        System.out.println(sum);
         score = sum;
         return sum;
     }
 
     public static void main(String[] args) {
-//        String[] files = {"a_example"};
         String[] files = {"a_example", "b_read_on", "c_incunabula", "d_tough_choices", "e_so_many_books", "f_libraries_of_the_world"};
         String dir = System.getProperty("user.dir").replaceAll("hashcode.*", "hashcode/");
 
@@ -215,22 +159,10 @@ public class Hashcode {
             Hashcode hc = new Hashcode(filename);
             hc.greedySolver();
             s += hc.score;
-//            System.out.println(hc.toString());
-//            System.out.println(file);
         }
-        System.out.println(s);
     }
 
-    /**
-     * output in the format:
-     * library id:
-     */
-
-// copies of book can exist in multiple libs
-// copies might exists in a library
-
-
-// libraries can be signed up, one at a time, in any order
+    // libraries can be signed up, one at a time, in any order
     class Library implements Comparable<Library> {
         // given params
         final Book[] books;
@@ -278,8 +210,6 @@ public class Hashcode {
             for (int i = setupTime; i < maxRunningTime; i++) {
                 percentOfLibraryMax[i] = scoreAfterNDays[i] / max;
             }
-//            System.out.println(Arrays.toString(scoreAfterNDays));
-//            System.out.println(Arrays.toString(percentOfLibraryMax));
         }
 
         void updateLibraryHeuristics() {
