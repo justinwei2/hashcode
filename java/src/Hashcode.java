@@ -28,11 +28,8 @@ public class Hashcode {
                 int[] attr = lines[i];
                 libraries[libraryIndex] = new Library(attr[0], attr[1], attr[2], libraryIndex);
             } else {
-                int[] bookIds = lines[i];
-                for (int j = 0; j < bookIds.length; j++) {
-                    int bookId = bookIds[j];
-                    libraries[libraryIndex].books[j] = new Book(bookId, bookScores[bookId]);
-                }
+                libraries[libraryIndex].setupBooks(lines[i]);
+
             }
         }
 
@@ -91,7 +88,8 @@ public class Hashcode {
             String filename = dir + file + ".txt";
             Hashcode hc = new Hashcode(filename);
             hc.solve();
-            System.out.println(hc.toString());
+//            System.out.println(hc.toString());
+            System.out.println(file);
         }
     }
 
@@ -106,17 +104,18 @@ public class Hashcode {
     // libraries can be signed up, one at a time, in any order
     class Library {
         // given params
-        Book[] books;
-        int setupTime;
-        int scanRate;
+        final Book[] books;
+        final int setupTime;
+        final int scanRate;
 
         // extra info
-        int numBooks;
-        int libraryId;
+        final int numBooks;
+        final int libraryId;
 
         // heuristics
-        int[] scoreFromDay[];
-        int timeToCompletion;
+        int maxRunningTime;
+        final int[] scoreAfterNDays;
+        final double[] percentOfLibraryMax;
 
         Library(int numBooks, int setupTime, int scanRate, int libraryId) {
             this.numBooks = numBooks;
@@ -125,17 +124,42 @@ public class Hashcode {
             this.libraryId = libraryId;
 
             books = new Book[numBooks];
+            maxRunningTime = numBooks + setupTime;
+            scoreAfterNDays = new int[maxRunningTime];
+            percentOfLibraryMax = new double[maxRunningTime];
+        }
+
+        // setup books and sort
+        void setupBooks(int[] bookIds) {
+            for (int i = 0; i < bookIds.length; i++) {
+                int bookId = bookIds[i];
+                books[i] = new Book(bookId, bookScores[bookId]);
+            }
+            Arrays.sort(books);
+            for (int i = setupTime; i < maxRunningTime; i++) {
+                scoreAfterNDays[i] = scoreAfterNDays[i - 1] + books[i - setupTime].bookScore;
+            }
+            double max = scoreAfterNDays[maxRunningTime - 1];
+            for (int i = setupTime; i < maxRunningTime; i++) {
+                percentOfLibraryMax[i] = scoreAfterNDays[i] / max;
+            }
+//            System.out.println(Arrays.toString(scoreAfterNDays));
+//            System.out.println(Arrays.toString(percentOfLibraryMax));
         }
     }
 
     // can be scanned in parallel
-    class Book {
-        int bookId;
-        int bookScore;
+    class Book implements Comparable<Book> {
+        final int bookId;
+        final int bookScore;
 
         public Book(int bookId, int bookScore) {
             this.bookId = bookId;
             this.bookScore = bookScore;
+        }
+
+        public int compareTo(Book b2) {
+            return b2.bookScore - bookScore;
         }
     }
 
