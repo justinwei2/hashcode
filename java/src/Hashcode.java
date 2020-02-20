@@ -158,7 +158,7 @@ public class Hashcode {
         String[] files = {"a_example", "b_read_on", "c_incunabula", "d_tough_choices", "e_so_many_books", "f_libraries_of_the_world"};
         String dir = System.getProperty("user.dir").replaceAll("hashcode.*", "hashcode/");
 
-        for (double i = 0; i < 5; i += .5) {
+        for (double i = .5; i < 1.5; i += .1) {
             int score = 0;
             for (String file : files) {
                 String filename = dir + file + ".txt";
@@ -249,12 +249,22 @@ public class Hashcode {
         }
 
         public int compareTo(Library l2) {
+            // larger is better
+            double score1 = 0;
+            double score2 = 0;
+
+            int len1 = scoreAfterNDays.length - 1;
+            int len2 = l2.scoreAfterNDays.length - 1;
+            double remaining = days - day;
+
             // find and average of setupTime interval
-            double n = scale;
-            int i1 = (int) (Math.min(scoreAfterNDays.length - 1, setupTime * n * scanRate));
-            int i2 = (int) (Math.min(l2.scoreAfterNDays.length - 1, l2.setupTime * n * l2.scanRate));
-            double score1 = 1. * scoreAfterNDays[i1] / setupTime;
-            double score2 = 1. * l2.scoreAfterNDays[i2] / l2.setupTime;
+            int i1 = (int) (Math.min(len1, remaining * scale * scanRate));
+            int i2 = (int) (Math.min(len2, remaining * scale * l2.scanRate));
+
+            score1 = 1. * scoreAfterNDays[i1] / setupTime;
+            score2 = 1. * l2.scoreAfterNDays[i2] / l2.setupTime;
+
+            // max priority queue
             return -Double.compare(score1, score2);
         }
     }
